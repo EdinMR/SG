@@ -1,0 +1,74 @@
+// ConfigService.gs
+
+/**
+ * Obtiene el nombre de la tienda de la hoja de Configuración.
+ * @return {Object} - Objeto con status y el nombre de la tienda.
+ */
+function getStoreName() {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('Configuracion');
+  if (!sheet) {
+    Logger.log('ERROR: Hoja "Configuracion" no encontrada.');
+    return { status: 'error', message: 'Error interno del servidor: Hoja de configuración no disponible.' };
+  }
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const keyColIndex = headers.indexOf('Key');
+  const valueColIndex = headers.indexOf('Value');
+
+  if (keyColIndex === -1 || valueColIndex === -1) {
+    Logger.log('ERROR: Columnas "Key" o "Value" no encontradas en la hoja Configuracion.');
+    return { status: 'error', message: 'Error de configuración en la hoja de configuración.' };
+  }
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][keyColIndex] === 'NombreTienda') {
+      return { status: 'success', data: { storeName: data[i][valueColIndex] } };
+    }
+  }
+  return { status: 'success', data: { storeName: 'Mi Tienda de Ropa' } };
+}
+
+/**
+ * Establece/actualiza el nombre de la tienda en la hoja de Configuración.
+ * @param {string} newName - El nuevo nombre de la tienda.
+ * @return {Object} - Objeto con status y mensaje.
+ */
+function setStoreName(newName) {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('Configuracion');
+  if (!sheet) {
+    Logger.log('ERROR: Hoja "Configuracion" no encontrada.');
+    return { status: 'error', message: 'Error interno del servidor: Hoja de configuración no disponible.' };
+  }
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const keyColIndex = headers.indexOf('Key');
+  const valueColIndex = headers.indexOf('Value');
+  const descriptionColIndex = headers.indexOf('Descripcion');
+  const updateDateColIndex = headers.indexOf('Fecha_Actualizacion');
+
+  if (keyColIndex === -1 || valueColIndex === -1 || descriptionColIndex === -1 || updateDateColIndex === -1) {
+    Logger.log('ERROR: Columnas necesarias no encontradas en la hoja Configuracion. Asegúrate de tener "Key", "Value", "Descripcion" y "Fecha_Actualizacion".');
+    return { status: 'error', message: 'Error de configuración en la hoja de configuración: Faltan columnas clave.' };
+  }
+
+  let found = false;
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][keyColIndex] === 'NombreTienda') {
+      sheet.getRange(i + 1, valueColIndex + 1).setValue(newName);
+      sheet.getRange(i + 1, updateDateColIndex + 1).setValue(new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' }));
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    const newRow = Array(headers.length).fill('');
+    newRow[keyColIndex] = 'NombreTienda';
+    newRow[valueColIndex] = newName;
+    newRow[descriptionColIndex] = 'Nombre principal de la tienda.';
+    newRow[updateDateColIndex] = new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' });
+    sheet.appendRow(newRow);
+  }
+
+  return { status: 'success', message: 'Nombre de la tienda actualizado con éxito.' };
+}
