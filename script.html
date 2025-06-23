@@ -1,0 +1,442 @@
+<script>
+  // script.html (frontend JS)
+
+  // ¡IMPORTANTE! REEMPLAZA ESTA URL con la URL de tu aplicación web de Apps Script
+  // Esta URL se obtendrá DESPUÉS de hacer el PRIMER despliegue de este nuevo proyecto.
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwRiUMnCzsd6fwzcDGRJDNGFpUPNcq31tYbeX_fDA-_tUeEDB-GyjmxqKS791RXdCHlmA/exec'; // <--- ¡ACTUALIZA ESTO con tu URL real!
+
+  // Elementos del DOM
+  const loginForm = document.getElementById('login-form');
+  const usernameInput = document.getElementById('username');
+  const passwordInput = document.getElementById('password');
+  const authMessage = document.getElementById('auth-message');
+  const loginContainer = document.getElementById('login-container');
+  const appContainer = document.getElementById('app-container');
+  const loggedInUserSpan = document.getElementById('loggedInUser');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const menuToggleBtn = document.getElementById('menuToggle');
+  const sidebar = document.getElementById('sidebar');
+  const mainContent = document.getElementById('mainContent');
+  const contentArea = document.getElementById('content');
+  const storeNameDisplay = document.getElementById('storeNameDisplay');
+  const editStoreNameBtn = document.getElementById('editStoreNameBtn');
+  const storeNameModal = document.getElementById('storeNameModal');
+  const closeButton = storeNameModal.querySelector('.close-button');
+  const newStoreNameInput = document.getElementById('newStoreNameInput');
+  const saveStoreNameBtn = document.getElementById('saveStoreNameBtn');
+  const storeNameMessage = document.getElementById('storeNameMessage');
+
+  // Función para mostrar mensajes de feedback
+  function showMessage(element, message, type = 'info', duration = 3000) {
+      element.textContent = message;
+      element.className = `message-box show ${type}`; // Añadir clase 'show' y tipo
+      setTimeout(() => {
+          element.className = 'message-box'; // Eliminar clases para ocultar y resetear
+      }, duration);
+  }
+
+  // --- Funciones de comunicación con Apps Script (Backend) ---
+
+  /**
+   * Envía una solicitud POST al backend de Apps Script.
+   * @param {string} action - La acción a realizar en el backend.
+   * @param {Object} data - Los datos a enviar al backend.
+   * @return {Promise<Object>} - Una promesa que resuelve con la respuesta del servidor.
+   */
+  async function callApi(action, data) {
+      try {
+          const response = await fetch(API_URL, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ action, data }),
+          });
+
+          if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorText}`);
+          }
+
+          return await response.json();
+      } catch (error) {
+          console.error('Error al comunicarse con la API:', error);
+          // Este mensaje se mostrará en el frontend
+          showMessage(authMessage, `Error de conexión: ${error.message}`, 'error', 5000);
+          throw error; // Propagar el error para manejo posterior
+      }
+  }
+
+  // --- Lógica de Autenticación ---
+
+  async function handleLogin(e) {
+      e.preventDefault();
+      const username = usernameInput.value;
+      const password = passwordInput.value;
+
+      if (!username || !password) {
+          showMessage(authMessage, 'Por favor, introduce usuario y contraseña.', 'warning');
+          return;
+      }
+
+      try {
+          const response = await callApi('login', { username, password });
+          if (response.status === 'success') {
+              localStorage.setItem('loggedIn', 'true');
+              localStorage.setItem('username', response.data.userName);
+              localStorage.setItem('role', response.data.userRole);
+              showMessage(authMessage, response.message, 'success');
+              renderApp(); // Cargar la aplicación principal
+          } else {
+              showMessage(authMessage, response.message, 'error');
+          }
+      } catch (error) {
+          // El error ya fue manejado y mostrado por callApi
+          console.error('Login fallido:', error);
+      }
+  }
+
+  function handleLogout() {
+      localStorage.removeItem('loggedIn');
+      localStorage.removeItem('username');
+      localStorage.removeItem('role');
+      loginContainer.style.display = 'flex';
+      appContainer.style.display = 'none';
+      authMessage.textContent = ''; // Limpiar mensaje al desloguear
+      usernameInput.value = '';
+      passwordInput.value = '';
+      closeSidebar(); // Asegurarse de que el sidebar esté cerrado al desloguear
+  }
+
+  // --- Lógica de la Interfaz de la Aplicación ---
+
+  async function renderApp() {
+      loginContainer.style.display = 'none';
+      appContainer.style.display = 'flex';
+      loggedInUserSpan.textContent = `Bienvenido, ${localStorage.getItem('username')} (${localStorage.getItem('role')})`;
+      await loadStoreName(); // Cargar el nombre de la tienda al iniciar la app
+      loadDashboard(); // Carga el dashboard por defecto
+  }
+
+  function toggleSidebar() {
+      sidebar.classList.toggle('open');
+      mainContent.classList.toggle('shifted');
+  }
+
+  function closeSidebar() {
+      sidebar.classList.remove('open');
+      mainContent.classList.remove('shifted');
+  }
+
+  // Cargar contenido dinámicamente
+  async function loadContent(page) {
+      contentArea.innerHTML = '<div class="loader"></div>'; // Mostrar loader
+
+      // Eliminar clase 'active' de todos los elementos de navegación
+      document.querySelectorAll('#sidebar nav ul li').forEach(item => {
+          item.classList.remove('active');
+      });
+
+      try {
+          let htmlContent = '';
+          switch (page) {
+              case 'dashboard':
+                  // Aquí se cargaría el contenido real del dashboard
+                  htmlContent = `
+                      <h2 style="color: var(--primary-color);">📊 Dashboard</h2>
+                      <p>Bienvenido al panel de control. Aquí podrás ver un resumen de tu negocio.</p>
+                      <div style="margin-top: 30px; display: flex; flex-wrap: wrap; gap: 20px;">
+                        <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; flex: 1; min-width: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <h3>Ventas del Día</h3>
+                            <p style="font-size: 2em; font-weight: bold; color: var(--primary-dark-color);">S/ 0.00</p>
+                        </div>
+                        <div style="background: #fff3e0; padding: 20px; border-radius: 8px; flex: 1; min-width: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <h3>Productos en Stock Bajo</h3>
+                            <p style="font-size: 2em; font-weight: bold; color: var(--warning-color);">0</p>
+                        </div>
+                        <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; flex: 1; min-width: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <h3>Últimas Transacciones</h3>
+                            <p style="font-size: 1.2em; color: var(--success-color);">Ninguna por ahora.</p>
+                        </div>
+                      </div>
+                  `;
+                  document.getElementById('navDashboard').classList.add('active');
+                  break;
+              case 'productos':
+                  htmlContent = `
+                      <h2 style="color: var(--primary-color);">📦 Inventario de Productos</h2>
+                      <div class="button-group">
+                          <button class="primary-button">Añadir Nuevo Producto</button>
+                      </div>
+                      <div class="table-container">
+                          <table class="data-table">
+                              <thead>
+                                  <tr>
+                                      <th>ID</th>
+                                      <th>NOMBRE</th>
+                                      <th>TALLA</th>
+                                      <th>COLOR</th>
+                                      <th>PRECIO VENTA (S/)</th>
+                                      <th>COSTO COMPRA (S/)</th>
+                                      <th>COSTO VARIABLE (S/)</th>
+                                      <th>STOCK</th>
+                                      <th>CATEGORÍA</th>
+                                      <th>IMAGEN</th>
+                                      <th>ACCIONES</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  <tr>
+                                      <td>N/A</td>
+                                      <td>N/A</td>
+                                      <td>M</td>
+                                      <td>Blanco</td>
+                                      <td>S/ 0.00</td>
+                                      <td>S/ 0.00</td>
+                                      <td>S/ 0.00</td>
+                                      <td>0</td>
+                                      <td>N/A</td>
+                                      <td><a href="#" class="action-link">Ver</a></td>
+                                      <td><a href="#" class="action-link">Editar</a> | <a href="#" class="action-link" style="color: var(--error-color);">Eliminar</a></td>
+                                  </tr>
+                                  <tr>
+                                      <td>N/A</td>
+                                      <td>N/A</td>
+                                      <td>32</td>
+                                      <td>Azul</td>
+                                      <td>S/ 0.00</td>
+                                      <td>S/ 0.00</td>
+                                      <td>S/ 0.00</td>
+                                      <td>0</td>
+                                      <td>N/A</td>
+                                      <td><a href="#" class="action-link">Ver</a></td>
+                                      <td><a href="#" class="action-link">Editar</a> | <a href="#" class="action-link" style="color: var(--error-color);">Eliminar</a></td>
+                                  </tr>
+                                  <tr>
+                                      <td>N/A</td>
+                                      <td>N/A</td>
+                                      <td>L</td>
+                                      <td>Negra</td>
+                                      <td>S/ 0.00</td>
+                                      <td>S/ 0.00</td>
+                                      <td>S/ 0.00</td>
+                                      <td>0</td>
+                                      <td>N/A</td>
+                                      <td><a href="#" class="action-link">Ver</a></td>
+                                      <td><a href="#" class="action-link">Editar</a> | <a href="#" class="action-link" style="color: var(--error-color);">Eliminar</a></td>
+                                  </tr>
+                                  <tr>
+                                      <td>N/A</td>
+                                      <td>N/A</td>
+                                      <td>S</td>
+                                      <td>Rosa</td>
+                                      <td>S/ 0.00</td>
+                                      <td>S/ 0.00</td>
+                                      <td>S/ 0.00</td>
+                                      <td>0</td>
+                                      <td>N/A</td>
+                                      <td><a href="#" class="action-link">Ver</a></td>
+                                      <td><a href="#" class="action-link">Editar</a> | <a href="#" class="action-link" style="color: var(--error-color);">Eliminar</a></td>
+                                  </tr>
+                                  <tr>
+                                      <td>N/A</td>
+                                      <td>N/A</td>
+                                      <td>XL</td>
+                                      <td>Gris</td>
+                                      <td>S/ 0.00</td>
+                                      <td>S/ 0.00</td>
+                                      <td>S/ 0.00</td>
+                                      <td>0</td>
+                                      <td>N/A</td>
+                                      <td><a href="#" class="action-link">Ver</a></td>
+                                      <td><a href="#" class="action-link" style="color: var(--error-color);">Eliminar</a></td>
+                                  </tr>
+                              </tbody>
+                          </table>
+                      </div>
+                  `;
+                  document.getElementById('navProductos').classList.add('active');
+                  break;
+              case 'transacciones':
+                  htmlContent = '<h2 style="color: var(--primary-color);">🧾 Gestión de Transacciones</h2><p>Aquí se listarán y gestionarán las transacciones de ventas y compras.</p>';
+                  document.getElementById('navVentas').classList.add('active');
+                  break;
+              case 'nuevaVenta':
+                  htmlContent = '<h2 style="color: var(--primary-color);">🛒 Nueva Venta (POS)</h2><p>Interfaz para registrar nuevas ventas.</p>';
+                  document.getElementById('navNuevaVenta').classList.add('active');
+                  break;
+              case 'clientes':
+                  htmlContent = '<h2 style="color: var(--primary-color);">🧍 Gestión de Clientes</h2><p>Aquí se gestionarán los datos de los clientes.</p>';
+                  document.getElementById('navClientes').classList.add('active');
+                  break;
+              case 'proveedores':
+                  htmlContent = '<h2 style="color: var(--primary-color);">👨‍💼 Gestión de Proveedores</h2><p>Aquí se gestionarán los datos de los proveedores.</p>';
+                  document.getElementById('navProveedores').classList.add('active');
+                  break;
+              case 'ordenesCompra':
+                  htmlContent = '<h2 style="color: var(--primary-color);">🛍️ Órdenes de Compra</h2><p>Aquí se registrarán y seguirán las órdenes de compra a proveedores.</p>';
+                  document.getElementById('navOrdenesCompra').classList.add('active');
+                  break;
+              case 'gastosFijos':
+                  htmlContent = '<h2 style="color: var(--primary-color);">💰 Gestión de Gastos Fijos</h2><p>Registra y visualiza tus gastos fijos aquí.</p>';
+                  document.getElementById('navGastosFijos').classList.add('active');
+                  break;
+              case 'egresosOperacionales':
+                  htmlContent = '<h2 style="color: var(--primary-color);">💸 Otros Egresos Operacionales</h2><p>Registra otros gastos no fijos.</p>';
+                  document.getElementById('navEgresosOperacionales').classList.add('active');
+                  break;
+              case 'cierreCaja':
+                  htmlContent = '<h2 style="color: var(--primary-color);">💵 Cierre de Caja</h2><p>Realiza y visualiza los cierres de caja diarios.</p>';
+                  document.getElementById('navCierreCaja').classList.add('active');
+                  break;
+              case 'puntoEquilibrio':
+                  htmlContent = '<h2 style="color: var(--primary-color);">📈 Punto de Equilibrio</h2><p>Calcula y visualiza tu punto de equilibrio.</p>';
+                  document.getElementById('navPuntoEquilibrio').classList.add('active');
+                  break;
+              case 'reportes':
+                  htmlContent = '<h2 style="color: var(--primary-color);">📄 Reportes</h2><p>Genera varios reportes sobre las operaciones de tu tienda.</p>';
+                  document.getElementById('navReportes').classList.add('active');
+                  break;
+              case 'configuracion':
+                  htmlContent = '<h2 style="color: var(--primary-color);">⚙️ Configuración</h2><p>Ajustes generales de la aplicación.</p>';
+                  document.getElementById('navConfiguracion').classList.add('active');
+                  break;
+              default:
+                  htmlContent = '<p>Contenido no encontrado.</p>';
+                  break;
+          }
+          contentArea.innerHTML = htmlContent;
+      } catch (error) {
+          console.error('Error al cargar contenido:', error);
+          contentArea.innerHTML = `<p style="color: var(--error-color);">Error al cargar la página: ${error.message}</p>`;
+      } finally {
+          closeSidebar(); // Cerrar sidebar después de navegar
+      }
+  }
+
+  // Funciones de carga específicas
+  function loadDashboard() { loadContent('dashboard'); }
+  function loadProductos() { loadContent('productos'); }
+  function loadVentas() { loadContent('transacciones'); }
+  function loadNuevaVenta() { loadContent('nuevaVenta'); }
+  function loadClientes() { loadContent('clientes'); }
+  function loadProveedores() { loadContent('proveedores'); }
+  function loadOrdenesCompra() { loadContent('ordenesCompra'); }
+  function loadGastosFijos() { loadContent('gastosFijos'); }
+  function loadEgresosOperacionales() { loadContent('egresosOperacionales'); }
+  function loadCierreCaja() { loadContent('cierreCaja'); }
+  function loadPuntoEquilibrio() { loadContent('puntoEquilibrio'); }
+  function loadReportes() { loadContent('reportes'); }
+  function loadConfiguracion() { loadContent('configuracion'); }
+
+
+  // --- Funciones para el nombre de la tienda (Modal) ---
+  async function loadStoreName() {
+      try {
+          const response = await callApi('getStoreName', {});
+          if (response.status === 'success') {
+              storeNameDisplay.textContent = response.data.storeName;
+              newStoreNameInput.value = response.data.storeName; // Rellenar modal con nombre actual
+          } else {
+              storeNameDisplay.textContent = 'Nombre no disponible';
+              console.error('Error al obtener nombre de la tienda:', response.message);
+          }
+      } catch (error) {
+          storeNameDisplay.textContent = 'Error al cargar nombre';
+          console.error('Error de conexión al obtener nombre de la tienda:', error);
+      }
+  }
+
+  async function saveStoreName() {
+      const newName = newStoreNameInput.value.trim();
+      if (!newName) {
+          showMessage(storeNameMessage, 'El nombre de la tienda no puede estar vacío.', 'warning');
+          return;
+      }
+
+      try {
+          const response = await callApi('setStoreName', { name: newName });
+          if (response.status === 'success') {
+              showMessage(storeNameMessage, response.message, 'success');
+              storeNameDisplay.textContent = newName; // Actualizar directamente en la cabecera
+              setTimeout(() => {
+                  storeNameModal.style.display = 'none'; // Cerrar modal después de éxito
+              }, 1000); // Dar tiempo para ver el mensaje
+          } else {
+              showMessage(storeNameMessage, response.message, 'error');
+          }
+      } catch (error) {
+          console.error('Error al guardar nombre de la tienda:', error);
+          showMessage(storeNameMessage, `Error al guardar: ${error.message}`, 'error');
+      }
+  }
+
+  // --- Event Listeners ---
+
+  // Login
+  if (loginForm) {
+      loginForm.addEventListener('submit', handleLogin);
+  }
+
+  // Logout
+  if (logoutBtn) {
+      logoutBtn.addEventListener('click', handleLogout);
+  }
+
+  // Sidebar Toggle
+  if (menuToggleBtn) {
+      menuToggleBtn.addEventListener('click', toggleSidebar);
+  }
+
+  // Navigation Links
+  document.getElementById('navDashboard').addEventListener('click', loadDashboard);
+  document.getElementById('navProductos').addEventListener('click', loadProductos);
+  document.getElementById('navVentas').addEventListener('click', loadVentas);
+  document.getElementById('navNuevaVenta').addEventListener('click', loadNuevaVenta);
+  document.getElementById('navClientes').addEventListener('click', loadClientes);
+  document.getElementById('navProveedores').addEventListener('click', loadProveedores);
+  document.getElementById('navOrdenesCompra').addEventListener('click', loadOrdenesCompra);
+  document.getElementById('navGastosFijos').addEventListener('click', loadGastosFijos);
+  document.getElementById('navEgresosOperacionales').addEventListener('click', loadEgresosOperacionales);
+  document.getElementById('navCierreCaja').addEventListener('click', loadCierreCaja);
+  document.getElementById('navPuntoEquilibrio').addEventListener('click', loadPuntoEquilibrio);
+  document.getElementById('navReportes').addEventListener('click', loadReportes);
+  document.getElementById('navConfiguracion').addEventListener('click', loadConfiguracion);
+
+  // Store Name Modal
+  if (editStoreNameBtn) {
+      editStoreNameBtn.addEventListener('click', () => {
+          storeNameModal.style.display = 'block';
+          storeNameMessage.className = 'message-box'; // Limpiar mensaje anterior
+          newStoreNameInput.value = storeNameDisplay.textContent; // Cargar nombre actual
+      });
+  }
+
+  if (closeButton) {
+      closeButton.addEventListener('click', () => {
+          storeNameModal.style.display = 'none';
+      });
+  }
+
+  if (saveStoreNameBtn) {
+      saveStoreNameBtn.addEventListener('click', saveStoreName);
+  }
+
+  // Cerrar modal al hacer clic fuera de él
+  window.addEventListener('click', (event) => {
+      if (event.target === storeNameModal) {
+          storeNameModal.style.display = 'none';
+      }
+  });
+
+
+  // --- Inicialización al cargar la página ---
+  document.addEventListener('DOMContentLoaded', () => {
+      if (localStorage.getItem('loggedIn') === 'true') {
+          renderApp();
+      } else {
+          loginContainer.style.display = 'flex';
+          appContainer.style.display = 'none';
+      }
+  });
+</script>
