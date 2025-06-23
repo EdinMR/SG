@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('style'); ?>
+  </head>
+  <body>
+    <div id="login-container" class="auth-card">
+      <h2>Iniciar Sesión</h2>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Usuario:</label>
+          <input type="text" id="username" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Contraseña:</label>
+          <input type="password" id="password" required>
+        </div>
+        <button type="submit" class="primary-button">Entrar</button>
+      </form>
+      <div id="auth-message" class="message-box"></div>
+    </div>
+
+    <div id="app-container" style="display:none;">
+      <header class="main-header">
+          <div class="header-left">
+              <button id="menuToggle" class="menu-button">☰</button>
+              <h1 id="storeNameDisplay">Cargando Nombre...</h1>
+              <button id="editStoreNameBtn" class="edit-button">✏️</button>
+          </div>
+          <div class="header-right">
+              <span id="loggedInUser"></span>
+              <button id="logoutBtn" class="logout-button">Salir</button>
+          </div>
+      </header>
+
+      <aside id="sidebar">
+          <nav>
+              <ul>
+                  <li id="navDashboard"><a href="#">📊 Dashboard</a></li>
+                  <li id="navProductos"><a href="#">📦 Inventario</a></li>
+                  <li id="navVentas"><a href="#">🧾 Transacciones</a></li>
+                  <li id="navNuevaVenta"><a href="#">🛒 Nueva Venta (POS)</a></li>
+                  <li id="navClientes"><a href="#">🧍 Clientes</a></li>
+                  <li id="navProveedores"><a href="#">👨‍💼 Proveedores</a></li>
+                  <li id="navOrdenesCompra"><a href="#">🛍️ Órdenes de Compra</a></li>
+                  <li id="navGastosFijos"><a href="#">💰 Gastos Fijos</a></li>
+                  <li id="navEgresosOperacionales"><a href="#">💸 Otros Egresos</a></li>
+                  <li id="navCierreCaja"><a href="#">💵 Cierre de Caja</a></li>
+                  <li id="navPuntoEquilibrio"><a href="#">📈 Punto de Equilibrio</a></li>
+                  <li id="navReportes"><a href="#">📄 Reportes</a></li>
+                  <li id="navConfiguracion"><a href="#">⚙️ Configuración</a></li>
+              </ul>
+          </nav>
+      </aside>
+
+      <main id="mainContent">
+          <div id="content">
+              <div class="loader"></div>
+          </div>
+      </main>
+    </div>
+
+    <div id="storeNameModal" class="modal">
+      <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2>Editar Nombre de la Tienda</h2>
+        <input type="text" id="newStoreNameInput" placeholder="Nuevo nombre de la tienda">
+        <button id="saveStoreNameBtn" class="primary-button">Guardar</button>
+        <div id="storeNameMessage" class="message-box"></div>
+      </div>
+    </div>
+
+    <?!= include('script'); ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.2"></script>
+  </body>
+</html>
